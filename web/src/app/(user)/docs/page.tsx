@@ -418,7 +418,7 @@ export default function DocsPage() {
         return () => container.removeEventListener("scroll", handleScroll);
     }, [filteredSections]);
 
-    const subtitle = ENABLE_VIDEO ? "了解如何使用无限画布进行 AI 图片与视频创作。" : "了解如何使用无限画布进行 AI 图片创作。";
+    const subtitle = ENABLE_VIDEO ? "了解如何使用 ReverseAPI 无限画布进行 AI 图片与视频创作。" : "了解如何使用 ReverseAPI 无限画布进行 AI 图片创作。";
 
     return (
         <main ref={scrollRef} className="h-full overflow-y-auto">
