@@ -8,6 +8,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { defaultConfig, useConfigStore, useEffectiveConfig, type AiConfig } from "@/stores/use-config-store";
 import { CreditSymbol, requestCreditCost } from "@/constant/credits";
 import { canvasThemes } from "@/lib/canvas-theme";
+import { ENABLE_VIDEO } from "@/constant/env";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { CanvasImageSettingsPopover } from "./canvas-image-settings-popover";
 import { CanvasAudioSettingsPopover, type CanvasAudioSettingKey } from "./canvas-audio-settings-popover";
@@ -66,24 +67,28 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
                                     </span>
                                 ),
                             },
-                            {
-                                value: "video",
-                                label: (
-                                    <span className="inline-flex items-center gap-1">
-                                        <Video className="size-3.5" />
-                                        视频
-                                    </span>
-                                ),
-                            },
-                            {
-                                value: "audio",
-                                label: (
-                                    <span className="inline-flex items-center gap-1">
-                                        <Music2 className="size-3.5" />
-                                        音频
-                                    </span>
-                                ),
-                            },
+                            ...(ENABLE_VIDEO
+                                ? [
+                                      {
+                                          value: "video",
+                                          label: (
+                                              <span className="inline-flex items-center gap-1">
+                                                  <Video className="size-3.5" />
+                                                  视频
+                                              </span>
+                                          ),
+                                      },
+                                      {
+                                          value: "audio",
+                                          label: (
+                                              <span className="inline-flex items-center gap-1">
+                                                  <Music2 className="size-3.5" />
+                                                  音频
+                                              </span>
+                                          ),
+                                      },
+                                  ]
+                                : []),
                         ]}
                     />
                 </div>
