@@ -1,6 +1,7 @@
 import { FileText, ImagePlus, Images, Maximize2, Video } from "lucide-react";
+import { ENABLE_VIDEO } from "@/constant/env";
 
-export const navigationTools = [
+const allNavigationTools = [
     {
         slug: "canvas",
         label: "我的画布",
@@ -15,6 +16,7 @@ export const navigationTools = [
         slug: "video",
         label: "视频创作台",
         icon: Video,
+        requiresVideo: true,
     },
     {
         slug: "prompts",
@@ -28,4 +30,6 @@ export const navigationTools = [
     },
 ] as const;
 
-export type NavigationToolSlug = (typeof navigationTools)[number]["slug"];
+export const navigationTools = allNavigationTools.filter((t) => !("requiresVideo" in t && t.requiresVideo) || ENABLE_VIDEO);
+
+export type NavigationToolSlug = (typeof allNavigationTools)[number]["slug"];

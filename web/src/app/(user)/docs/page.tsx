@@ -2,8 +2,9 @@
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { ENABLE_VIDEO } from "@/constant/env";
 
 type Section = {
     id: string;
@@ -11,9 +12,10 @@ type Section = {
     description?: string;
     items?: string[];
     table?: { columns: string[]; rows: string[][] };
-    subsections?: { title: string; items: string[] }[];
+    subsections?: { title: string; items: string[]; videoOnly?: boolean }[];
     steps?: string[];
     tip?: string;
+    videoOnly?: boolean;
 };
 
 const sections: Section[] = [
@@ -51,6 +53,7 @@ const sections: Section[] = [
             },
             {
                 title: "视频生成接口",
+                videoOnly: true,
                 items: [
                     "OpenAI 风格视频：POST /v1/videos 创建、GET /v1/videos/{id} 查询、GET /v1/videos/{id}/content 获取内容。",
                     "Seedance 2.0 视频：使用 POST /contents/generations/tasks 创建异步任务，系统会自动轮询 GET /contents/generations/tasks/{id} 获取结果。",
@@ -163,6 +166,7 @@ const sections: Section[] = [
             },
             {
                 title: "视频节点",
+                videoOnly: true,
                 items: [
                     "展示和播放视频内容，使用原生播放器。",
                     "支持拖入或上传本地视频文件。",
@@ -173,6 +177,7 @@ const sections: Section[] = [
             },
             {
                 title: "音频节点",
+                videoOnly: true,
                 items: [
                     "支持音频参考输入，可作为视频生成的参考素材。",
                 ],
@@ -383,15 +388,24 @@ function SectionContent({ section }: { section: Section }) {
 }
 
 export default function DocsPage() {
-    const [activeId, setActiveId] = useState(sections[0].id);
+    const filteredSections = useMemo(() => {
+        if (ENABLE_VIDEO) return sections;
+        return sections
+            .filter((s) => !s.videoOnly)
+            .map((s) => ({
+                ...s,
+                subsections: s.subsections?.filter((sub) => !sub.videoOnly),
+            }));
+    }, []);
+    const [activeId, setActiveId] = useState(filteredSections[0].id);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const container = scrollRef.current;
         if (!container) return;
         const handleScroll = () => {
-            let current = sections[0].id;
-            for (const section of sections) {
+            let current = filteredSections[0].id;
+            for (const section of filteredSections) {
                 const el = document.getElementById(section.id);
                 if (el) {
                     const rect = el.getBoundingClientRect();
@@ -402,7 +416,9 @@ export default function DocsPage() {
         };
         container.addEventListener("scroll", handleScroll, { passive: true });
         return () => container.removeEventListener("scroll", handleScroll);
-    }, []);
+    }, [filteredSections]);
+
+    const subtitle = ENABLE_VIDEO ? "了解如何使用无限画布进行 AI 图片与视频创作。" : "了解如何使用无限画布进行 AI 图片创作。";
 
     return (
         <main ref={scrollRef} className="h-full overflow-y-auto">
@@ -415,7 +431,7 @@ export default function DocsPage() {
                         </Link>
                         <p className="mb-3 text-xs font-medium uppercase tracking-wider text-stone-400">目录</p>
                         <nav className="flex flex-col gap-0.5">
-                            {sections.map((s) => (
+                            {filteredSections.map((s) => (
                                 <a
                                     key={s.id}
                                     href={`#${s.id}`}
@@ -441,10 +457,10 @@ export default function DocsPage() {
                         </Link>
                     </div>
                     <h1 className="mb-2 text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">使用指南</h1>
-                    <p className="mb-10 text-sm text-stone-500">了解如何使用无限画布进行 AI 图片与视频创作。</p>
+                    <p className="mb-10 text-sm text-stone-500">{subtitle}</p>
 
                     <div className="space-y-14">
-                        {sections.map((section) => (
+                        {filteredSections.map((section) => (
                             <SectionContent key={section.id} section={section} />
                         ))}
                     </div>
