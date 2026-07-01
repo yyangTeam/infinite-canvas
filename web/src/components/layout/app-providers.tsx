@@ -9,6 +9,7 @@ import zhCN from "antd/locale/zh_CN";
 
 import { ClientRootInit } from "@/components/layout/client-root-init";
 import { getAntThemeConfig } from "@/lib/app-theme";
+import { useSiteConfig } from "@/hooks/use-site-config";
 import { useThemeStore } from "@/stores/use-theme-store";
 
 const queryClient = new QueryClient({
@@ -24,6 +25,11 @@ const queryClient = new QueryClient({
 export function AppProviders({ children }: { children: ReactNode }) {
     const theme = useThemeStore((state) => state.theme);
     const dark = theme === "dark";
+    const loadSiteConfig = useSiteConfig((state) => state.load);
+
+    useEffect(() => {
+        void loadSiteConfig();
+    }, [loadSiteConfig]);
 
     useEffect(() => {
         document.documentElement.classList.toggle("dark", dark);

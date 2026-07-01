@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { ENABLE_VIDEO } from "@/constant/env";
+import { useSiteConfig } from "@/hooks/use-site-config";
 
 type Section = {
     id: string;
@@ -388,15 +388,16 @@ function SectionContent({ section }: { section: Section }) {
 }
 
 export default function DocsPage() {
+    const enableVideo = useSiteConfig((s) => s.enableVideo);
     const filteredSections = useMemo(() => {
-        if (ENABLE_VIDEO) return sections;
+        if (enableVideo) return sections;
         return sections
             .filter((s) => !s.videoOnly)
             .map((s) => ({
                 ...s,
                 subsections: s.subsections?.filter((sub) => !sub.videoOnly),
             }));
-    }, []);
+    }, [enableVideo]);
     const [activeId, setActiveId] = useState(filteredSections[0].id);
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -418,7 +419,7 @@ export default function DocsPage() {
         return () => container.removeEventListener("scroll", handleScroll);
     }, [filteredSections]);
 
-    const subtitle = ENABLE_VIDEO ? "了解如何使用 ReverseAPI 无限画布进行 AI 图片与视频创作。" : "了解如何使用 ReverseAPI 无限画布进行 AI 图片创作。";
+    const subtitle = enableVideo ? "了解如何使用 ReverseAPI 无限画布进行 AI 图片与视频创作。" : "了解如何使用 ReverseAPI 无限画布进行 AI 图片创作。";
 
     return (
         <main ref={scrollRef} className="h-full overflow-y-auto">

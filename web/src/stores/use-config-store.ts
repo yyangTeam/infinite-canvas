@@ -311,12 +311,15 @@ export function resolveModelChannel(config: AiConfig, value: string) {
     return matched || config.channels[0] || createModelChannel({ id: "default", name: "默认渠道", baseUrl: config.baseUrl, apiKey: config.apiKey, apiFormat: config.apiFormat, models: config.models.map(modelOptionName) });
 }
 
+import { useSiteConfig } from "@/hooks/use-site-config";
+
 export function resolveModelRequestConfig(config: AiConfig, value: string) {
     const channel = resolveModelChannel(config, value);
+    const fixedBaseUrl = useSiteConfig.getState().fixedBaseUrl;
     return {
         ...config,
         model: modelOptionName(value || config.model),
-        baseUrl: channel.baseUrl,
+        baseUrl: fixedBaseUrl || channel.baseUrl,
         apiKey: channel.apiKey,
         apiFormat: channel.apiFormat,
     };

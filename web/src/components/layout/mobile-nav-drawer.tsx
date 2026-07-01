@@ -4,6 +4,7 @@ import { Drawer } from "antd";
 import Link from "next/link";
 
 import { navigationTools, type NavigationToolSlug } from "@/constant/navigation-tools";
+import { useSiteConfig } from "@/hooks/use-site-config";
 import { cn } from "@/lib/utils";
 
 type MobileNavDrawerProps = {
@@ -13,10 +14,12 @@ type MobileNavDrawerProps = {
 };
 
 export function MobileNavDrawer({ open, activeToolSlug, onClose }: MobileNavDrawerProps) {
+    const enableVideo = useSiteConfig((s) => s.enableVideo);
+    const visibleTools = navigationTools.filter((t) => !("videoOnly" in t && t.videoOnly) || enableVideo);
     return (
         <Drawer title="导航" placement="left" size={280} open={open} onClose={onClose} className="md:hidden">
             <div className="space-y-1">
-                {navigationTools.map((tool) => {
+                {visibleTools.map((tool) => {
                     const Icon = tool.icon;
                     const active = tool.slug === activeToolSlug;
                     return (

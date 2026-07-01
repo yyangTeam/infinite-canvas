@@ -9,7 +9,7 @@ import { fetchChannelModels } from "@/services/api/image";
 import { syncAppDataToWebdav, type AppSyncDomainKey, type AppSyncProgressEvent } from "@/services/app-sync";
 import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webdav-sync";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
-import { ENABLE_VIDEO } from "@/constant/env";
+import { useSiteConfig } from "@/hooks/use-site-config";
 import { createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, modelOptionLabel, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 
 type ModelGroup = {
@@ -35,14 +35,14 @@ const allModelGroups: (ModelGroup & { videoOnly?: boolean })[] = [
     { capability: "audio", modelKey: "audioModel", modelsKey: "audioModels", defaultLabel: "默认音频模型", optionsLabel: "音频模型可选项" },
 ];
 
-const modelGroups = allModelGroups.filter((g) => !g.videoOnly || ENABLE_VIDEO);
+const modelGroups = allModelGroups;
 
 const apiFormatOptions: Array<{ label: string; value: ApiCallFormat }> = [
     { label: "OpenAI", value: "openai" },
     { label: "Gemini", value: "gemini" },
 ];
 
-const webdavDomainKeys: AppSyncDomainKey[] = ENABLE_VIDEO ? ["canvas", "assets", "image-workbench", "video-workbench"] : ["canvas", "assets", "image-workbench"];
+const allWebdavDomainKeys: AppSyncDomainKey[] = ["canvas", "assets", "image-workbench", "video-workbench"];
 const webdavDomainLabels: Record<AppSyncDomainKey, string> = {
     canvas: "画布",
     assets: "我的素材",
@@ -50,8 +50,8 @@ const webdavDomainLabels: Record<AppSyncDomainKey, string> = {
     "video-workbench": "视频创作台",
 };
 
-function createWebdavDomainProgress(): Record<AppSyncDomainKey, WebdavDomainProgress> {
-    return webdavDomainKeys.reduce(
+function createWebdavDomainProgress(keys: AppSyncDomainKey[]): Record<AppSyncDomainKey, WebdavDomainProgress> {
+    return keys.reduce(
         (progress, key) => ({
             ...progress,
             [key]: { label: webdavDomainLabels[key], stage: "等待同步" },
@@ -62,12 +62,15 @@ function createWebdavDomainProgress(): Record<AppSyncDomainKey, WebdavDomainProg
 
 export function AppConfigModal() {
     const { message } = App.useApp();
+    const { enableVideo, fixedBaseUrl } = useSiteConfig();
+    const visibleModelGroups = modelGroups.filter((g) => !g.videoOnly || enableVideo);
+    const webdavDomainKeys = enableVideo ? allWebdavDomainKeys : allWebdavDomainKeys.filter((k) => k !== "video-workbench");
     const [activeTab, setActiveTab] = useState("channels");
     const [loadingChannelId, setLoadingChannelId] = useState("");
     const [testingWebdav, setTestingWebdav] = useState(false);
     const [syncingWebdav, setSyncingWebdav] = useState(false);
     const [webdavSyncStatus, setWebdavSyncStatus] = useState("");
-    const [webdavDomainProgress, setWebdavDomainProgress] = useState(createWebdavDomainProgress);
+    const [webdavDomainProgress, setWebdavDomainProgress] = useState(() => createWebdavDomainProgress(webdavDomainKeys));
     const config = useConfigStore((state) => state.config);
     const webdav = useConfigStore((state) => state.webdav);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -106,7 +109,7 @@ export function AppConfigModal() {
     };
 
     const addChannel = () => {
-        updateChannels([...config.channels, createModelChannel({ name: `渠道 ${config.channels.length + 1}` })]);
+        updateChannels([...config.channels, createModelChannel({ name: `渠道 ${config.channels.length + 1}`, ...(fixedBaseUrl ? { baseUrl: fixedBaseUrl } : {}) })]);
     };
 
     const deleteChannel = (id: string) => {
@@ -196,7 +199,7 @@ export function AppConfigModal() {
             return;
         }
         setSyncingWebdav(true);
-        setWebdavDomainProgress(createWebdavDomainProgress());
+        setWebdavDomainProgress(createWebdavDomainProgress(webdavDomainKeys));
         setWebdavSyncStatus("准备同步");
         try {
             const result = await syncAppDataToWebdav(webdav, updateWebdavProgress);
@@ -283,7 +286,7 @@ export function AppConfigModal() {
                                                     <Select value={channel.apiFormat} options={apiFormatOptions} onChange={(value: ApiCallFormat) => updateChannelApiFormat(channel, value)} />
                                                 </Form.Item>
                                                 <Form.Item label="Base URL" className="mb-0">
-                                                    <Input value={channel.baseUrl} onChange={(event) => updateChannel(channel.id, { baseUrl: event.target.value })} />
+                                                    <Input value={fixedBaseUrl || channel.baseUrl} disabled={!!fixedBaseUrl} onChange={(event) => updateChannel(channel.id, { baseUrl: event.target.value })} />
                                                 </Form.Item>
                                                 <Form.Item label="API Key" className="mb-0">
                                                     <Input.Password value={channel.apiKey} onChange={(event) => updateChannel(channel.id, { apiKey: event.target.value })} />
@@ -308,7 +311,7 @@ export function AppConfigModal() {
                                     <div className="mt-1 text-xs leading-5 text-stone-500">可选项决定各处下拉框展示哪些模型；同名模型会以括号里的渠道名区分。</div>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    {modelGroups.map((group) => (
+                                    {visibleModelGroups.map((group) => (
                                         <Form.Item key={group.modelsKey} label={group.optionsLabel} className="mb-0">
                                             <Select
                                                 mode="tags"
@@ -324,7 +327,7 @@ export function AppConfigModal() {
                                     ))}
                                 </div>
                                 <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                                    {modelGroups.map((group) => (
+                                    {visibleModelGroups.map((group) => (
                                         <Form.Item key={group.modelKey} label={group.defaultLabel} className="mb-0">
                                             <ModelPicker config={config} value={config[group.modelKey]} onChange={(model) => updateConfig(group.modelKey, model)} capability={group.capability} fullWidth />
                                         </Form.Item>
