@@ -31,7 +31,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev' }}
 
   build:
     needs: meta
