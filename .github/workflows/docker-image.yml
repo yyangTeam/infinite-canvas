@@ -21,6 +21,12 @@ jobs:
       labels: ${{ steps.meta.outputs.labels }}
       image: ${{ steps.lower.outputs.image }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: VERSION
+          sparse-checkout-cone-mode: false
+      - id: version
+        run: echo "version=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
       - id: lower
         run: echo "image=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
       - id: meta
@@ -32,6 +38,7 @@ jobs:
             type=ref,event=tag
             type=sha,prefix=
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev' }}
+            type=raw,value=${{ steps.version.outputs.version }}
 
   build:
     needs: meta
