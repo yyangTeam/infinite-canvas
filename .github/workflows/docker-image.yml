@@ -11,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner && format('{0}/{1}', github.repository_owner, github.event.repository.name) || github.repository }}
 
 jobs:
   meta:
@@ -19,11 +19,14 @@ jobs:
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
       labels: ${{ steps.meta.outputs.labels }}
+      image: ${{ steps.lower.outputs.image }}
     steps:
+      - id: lower
+        run: echo "image=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ steps.lower.outputs.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -60,7 +63,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ needs.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ needs.meta.outputs.image }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=app-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=app-${{ matrix.arch }}
 
@@ -102,6 +105,7 @@ jobs:
         shell: bash
         env:
           TAGS: ${{ needs.meta.outputs.tags }}
+          IMAGE_NAME: ${{ needs.meta.outputs.image }}
         run: |
           tag_args=()
           while IFS= read -r tag; do
