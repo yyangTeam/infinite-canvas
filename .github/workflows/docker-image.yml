@@ -2,6 +2,7 @@ name: Docker image
 
 on:
   push:
+    branches: ["**"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -10,7 +11,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/basketikun/infinite-canvas
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   meta:
@@ -24,8 +25,10 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
+            type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
 
   build:
     needs: meta
