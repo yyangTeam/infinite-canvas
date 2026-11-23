@@ -1,4 +1,4 @@
 {
   "fixedBaseUrl": "https://reverse-api.xyz",
-  "enableVideo": false
+  "enableVideo": true
 }
