@@ -172,7 +172,7 @@ async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: st
             if (!created.id) throw new Error(apiText("noVideoTaskId"));
             return { id: created.id, provider: "openai", model };
         } catch (error) {
-            throw new Error(readAxiosError(error, apiText("videoTaskCreateFailed")));
+            throw new Error(videoCreateError(error, apiText("videoTaskCreateFailed")));
         }
     }
     const images = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
@@ -210,7 +210,7 @@ async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: st
         if (!created.id) throw new Error(apiText("noVideoTaskId"));
         return { id: created.id, provider: "openai", model };
     } catch (error) {
-        throw new Error(readAxiosError(error, apiText("videoTaskCreateFailed")));
+        throw new Error(videoCreateError(error, apiText("videoTaskCreateFailed")));
     }
 }
 
@@ -270,7 +270,7 @@ async function createGeminiVideoTask(config: AiConfig, model: string, prompt: st
         if (!created.name) throw new Error(apiText("noVideoTaskId"));
         return { id: created.name, provider: "gemini", model };
     } catch (error) {
-        throw new Error(readAxiosError(error, apiText("videoTaskCreateFailed")));
+        throw new Error(videoCreateError(error, apiText("videoTaskCreateFailed")));
     }
 }
 
@@ -411,6 +411,13 @@ function readApiErrorMessage(value: unknown): string {
         readApiErrorMessage(payload.detail) ||
         ""
     );
+}
+
+function videoCreateError(error: unknown, fallback: string) {
+    if (!axios.isCancel(error) && !(error instanceof DOMException)) console.error("[video] task create failed", error);
+    const message = readAxiosError(error, fallback);
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    return status === 400 ? `${message}（${apiText("videoCreateRejected")}）` : message;
 }
 
 function readAxiosError(error: unknown, fallback: string) {

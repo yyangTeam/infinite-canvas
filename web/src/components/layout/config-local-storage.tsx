@@ -1,9 +1,10 @@
-import { Alert, Button, Progress, Spin } from "antd";
+import { Alert, App, Button, Progress, Spin } from "antd";
 import type { TFunction } from "i18next";
-import { Database, HardDrive, Layers3, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Database, Download, HardDrive, Layers3, RefreshCw, ScrollText, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { clearRuntimeLogs, downloadRuntimeLog, getRuntimeLogEntries, subscribeRuntimeLogs } from "@/lib/runtime-log";
 import { readLocalStorageUsage, type LocalStorageUsage } from "@/services/local-storage-usage";
 
 const storeLabelKeys: Record<string, string> = {
@@ -79,6 +80,7 @@ export function ConfigLocalStorage({ active }: { active: boolean }) {
                     </>
                 ) : null}
             </section>
+            <RuntimeLogSection />
             {usage?.databases.map((database) => (
                 <section key={database.name} className="overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
                     <div className="flex items-center justify-between gap-3 border-b border-stone-200 px-4 py-3 dark:border-stone-800">
@@ -103,6 +105,35 @@ export function ConfigLocalStorage({ active }: { active: boolean }) {
                 </section>
             ))}
         </div>
+    );
+}
+
+function RuntimeLogSection() {
+    const { t } = useTranslation();
+    const { message } = App.useApp();
+    const count = useSyncExternalStore(subscribeRuntimeLogs, () => getRuntimeLogEntries().length);
+    return (
+        <section className="rounded-lg border border-stone-200 p-4 dark:border-stone-800">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                        <ScrollText className="size-4" />
+                        {t("config.runtimeLog.title")}
+                    </div>
+                    <div className="mt-1 text-xs text-stone-500">{t("config.runtimeLog.description")}</div>
+                </div>
+                <div className="flex gap-2">
+                    <Button icon={<Download className="size-4" />} disabled={!count} onClick={() => {
+                        downloadRuntimeLog();
+                        message.success(t("config.runtimeLog.exported", { count }));
+                    }}>
+                        {t("config.runtimeLog.export")}
+                    </Button>
+                    <Button danger icon={<Trash2 className="size-4" />} disabled={!count} onClick={clearRuntimeLogs} />
+                </div>
+            </div>
+            <div className="mt-3 text-xs text-stone-500 tabular-nums">{t("config.runtimeLog.count", { count })}</div>
+        </section>
     );
 }
 
