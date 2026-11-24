@@ -147,11 +147,35 @@ export async function storeGeneratedVideo(result: VideoGenerationResult): Promis
 }
 
 async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], options?: VideoMediaOptions): Promise<VideoGenerationTask> {
-    const images = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
     const videos = await Promise.all((options?.videos || []).map((video) => referenceMediaToFile(video, "ref.mp4", "invalidReferenceVideo", options)));
     const audios = await Promise.all((options?.audios || []).map((audio) => referenceMediaToFile(audio, "ref.mp3", "invalidReferenceAudio", options)));
-    const mode = resolveVideoMode(config.videoMode, images.length);
+    const mode = resolveVideoMode(config.videoMode, references.length);
     const ratio = inferVideoRatio(config.size || "16:9");
+    // new-api 等中转站的 /v1/videos 不接受 multipart 文件字段，带参考图时改用 JSON + data URL
+    if (!videos.length && !audios.length) {
+        const images = await Promise.all(references.map((image) => imageToDataUrl(image)));
+        const payload: Record<string, unknown> = {
+            model: modelOptionName(model),
+            prompt,
+            seconds: Number(normalizeVideoSeconds(config.videoSeconds)),
+            size: normalizeVideoSize(config.size, config.vquality) || "1280x720",
+            resolution_name: normalizeVideoResolution(config.vquality),
+            generate_audio: boolConfig(config.videoGenerateAudio, true),
+            watermark: boolConfig(config.videoWatermark, false),
+            mode,
+        };
+        if (ratio && ratio !== "auto") payload.ratio = ratio;
+        if (images.length === 1) payload.image_url = images[0];
+        if (images.length > 1) payload.image_urls = images;
+        try {
+            const created = unwrapVideoResponse((await axios.post<ApiVideoResponse>(aiApiUrl(config, "/videos"), payload, { headers: aiHeaders(config), signal: options?.signal })).data);
+            if (!created.id) throw new Error(apiText("noVideoTaskId"));
+            return { id: created.id, provider: "openai", model };
+        } catch (error) {
+            throw new Error(readAxiosError(error, apiText("videoTaskCreateFailed")));
+        }
+    }
+    const images = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
     const body = new FormData();
     body.append("model", modelOptionName(model));
     body.append("prompt", prompt);
